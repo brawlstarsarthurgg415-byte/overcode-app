@@ -44,10 +44,13 @@ button,input,select,textarea{font:inherit;color:var(--tx)}
 <label>Instruções da IA</label><textarea id="sys" rows="3"></textarea>
 <label>Cor de destaque</label><input id="cor" type="color">
 <label><input type="checkbox" id="ouv" style="width:auto"> Ao apertar o botão lateral, já abrir ouvindo (voz)</label>
+<label><input type="checkbox" id="tts" style="width:auto"> Responder falando (voz)</label>
+<label>Voz da resposta</label><select id="voice"><option value="">Voz padrão do aparelho</option></select>
+<label>Velocidade da fala</label><input id="rate" type="range" min="0.75" max="1.35" step="0.05" value="1.0">
 <button class="bt" onclick="cfgSave()">Salvar</button></div></div>
 <script>
 const $=id=>document.getElementById(id);
-let C={prov:'gemini',gk:'',gm:'gemini-2.5-flash',ourl:'https://api.groq.com/openai/v1',okey:'',omod:'llama-3.3-70b-versatile',lurl:'http://127.0.0.1:8081',lmod:'',cor:'#d97757',ouv:true,
+let C={prov:'gemini',gk:'',gm:'gemini-2.5-flash',ourl:'https://api.groq.com/openai/v1',okey:'',omod:'llama-3.3-70b-versatile',lurl:'http://127.0.0.1:8081',lmod:'',cor:'#d97757',ouv:true,tts:true,voice:'',rate:1.0,
  sys:'Você é o Overcode, um assistente prestativo. Responda em português, de forma clara e direta.'};
 try{Object.assign(C,JSON.parse(Android.getCfg()||'{}'))}catch(e){}
 let H=[],busy=false,rid=0,cbs={},att=[],cur=0,autoSend=false;
@@ -66,6 +69,22 @@ window.onEnd=(id,code)=>{if(cbs[id]){cbs[id].end(code);delete cbs[id]}};
 window.onVoice=t=>{if(t){$('t').value+=($('t').value?' ':'')+t;if(autoSend){autoSend=false;send();return}}autoSend=false;$('t').focus()};
 window.onAssist=()=>{if(C.ouv){autoSend=true;Android.mic()}};
 function mic(){Android.mic()}
+function loadVoices(){
+ const sel=$('voice'); if(!sel)return;
+ const keep=C.voice||sel.value;
+ if(!('speechSynthesis' in window)){sel.innerHTML='<option value="">Vozes não disponíveis neste navegador</option>';return}
+ const voices=speechSynthesis.getVoices();
+ sel.innerHTML='<option value="">Voz padrão do aparelho</option>';
+ voices.forEach(v=>{const o=document.createElement('option');o.value=v.name;o.textContent=v.name+' ('+v.lang+')';sel.appendChild(o)});
+ sel.value=keep;
+}
+function speak(text){
+ if(!C.tts||!text||!('speechSynthesis' in window))return;
+ try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='pt-BR';u.rate=Number(C.rate)||1;
+  const v=speechSynthesis.getVoices().find(x=>x.name===C.voice);if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}
+}
+if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
+
 function req(method,url,headers,body,line,end){const id=++rid;cbs[id]={line:line,end:end};Android.http(id,method,url,JSON.stringify(headers),body||'');return id}
 function build(){
  if(C.prov==='gemini'){
@@ -89,17 +108,17 @@ function send(){const t=$('t').value.trim();if((!t&&!att.length)||busy)return;
  cur=req('POST',r.url,r.headers,r.body,l=>{raw+=l+'\n';const d=delta(l);if(d){out+=d;b.innerHTML=md(out);scr()}},code=>{
   ui(false);
   if(code>=400||code===-1){H.pop();b.textContent=(code===-1?'Falha de conexão: ':'Erro '+code+': ')+raw.slice(0,500)}
-  else{if(!out)b.textContent='(sem resposta; confira a chave, o modelo ou se o servidor local está ligado)';H.push({role:'assistant',text:out||'(sem resposta)'})}})}
-function stop(){Android.cancel(cur)}
+  else{if(!out)b.textContent='(sem resposta; confira a chave, o modelo ou se o servidor local está ligado)';H.push({role:'assistant',text:out||'(sem resposta)'});speak(out)}})}
+function stop(){Android.cancel(cur);if('speechSynthesis' in window)speechSynthesis.cancel()}
 function novo(){H=[];$('chat').innerHTML=''}
 $('f').onchange=async e=>{for(const f of e.target.files){const a={name:f.name,mime:f.type};
  if(f.type.indexOf('image/')===0){a.data=await new Promise(r=>{const x=new FileReader();x.onload=()=>r(x.result.split(',')[1]);x.readAsDataURL(f)})}
  else a.txt=(await f.text()).slice(0,20000);
  att.push(a)}e.target.value='';$('at').textContent='📎 '+att.map(a=>a.name).join(', ')};
 function cfgShow(){const p=$('p').value;$('g').style.display=p==='gemini'?'block':'none';$('o').style.display=p==='openai'?'block':'none';$('l').style.display=p==='local'?'block':'none'}
-function cfgOpen(){$('p').value=C.prov;['gk','gm','ourl','okey','omod','lurl','lmod','sys','cor'].forEach(k=>{$(k).value=C[k]});$('ouv').checked=C.ouv;cfgShow();$('cf').classList.add('on')}
+function cfgOpen(){$('p').value=C.prov;['gk','gm','ourl','okey','omod','lurl','lmod','sys','cor'].forEach(k=>{$(k).value=C[k]});$('ouv').checked=C.ouv;$('tts').checked=C.tts!==false;$('rate').value=C.rate||1;cfgShow();loadVoices();$('voice').value=C.voice||'';$('cf').classList.add('on')}
 function cfgClose(){$('cf').classList.remove('on')}
-function cfgSave(){C.prov=$('p').value;['gk','gm','ourl','okey','omod','lurl','lmod','sys','cor'].forEach(k=>{C[k]=$(k).value.trim()});C.ouv=$('ouv').checked;
+function cfgSave(){C.prov=$('p').value;['gk','gm','ourl','okey','omod','lurl','lmod','sys','cor'].forEach(k=>{C[k]=$(k).value.trim()});C.ouv=$('ouv').checked;C.tts=$('tts').checked;C.voice=$('voice').value;C.rate=Number($('rate').value)||1;
  Android.setCfg(JSON.stringify(C));tema();cfgClose()}
 function modelos(){const k=$('gk').value.trim();if(!k){$('gl').textContent='Cole a chave primeiro.';return}
  let raw='';$('gl').textContent='Buscando...';
