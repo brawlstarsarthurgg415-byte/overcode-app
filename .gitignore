@@ -1,0 +1,15 @@
+.gradle/
+build/
+**/build/
+local.properties
+*.iml
+.idea/
+__pycache__/
+*.py[cod]
+.work-backup/
+.web-check.js
+*.apk
+*.idsig
+*.log
+*.pid
+.overcode/
