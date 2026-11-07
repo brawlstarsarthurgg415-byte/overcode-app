@@ -1,0 +1,365 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Overcode Hub API",
+    "version": "2.7.0",
+    "description": "API local do Overcode. No aparelho use localhost. Na rede local, envie o token Bearer gerado por `overcode-hub lan`. Nunca exponha a porta 8765 diretamente à internet."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8765",
+      "description": "Hub local no Termux/Linux"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Obrigatório no modo LAN; no modo localhost não é exigido."
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Estado do motor",
+        "responses": {
+          "200": {
+            "description": "Saúde e estado do backend"
+          }
+        }
+      }
+    },
+    "/api/v1/state": {
+      "get": {
+        "summary": "Estado geral, modo e atividade",
+        "responses": {
+          "200": {
+            "description": "Estado do Hub"
+          }
+        }
+      }
+    },
+    "/api/v1/models": {
+      "get": {
+        "summary": "Provedores e modelos disponíveis",
+        "responses": {
+          "200": {
+            "description": "Lista sem chaves secretas"
+          }
+        }
+      }
+    },
+    "/api/v1/capabilities": {
+      "get": {
+        "summary": "Recursos da API",
+        "responses": {
+          "200": {
+            "description": "Capacidades e limites"
+          }
+        }
+      }
+    },
+    "/api/v1/openapi.json": {
+      "get": {
+        "summary": "Contrato OpenAPI",
+        "responses": {
+          "200": {
+            "description": "Documento OpenAPI"
+          }
+        }
+      }
+    },
+    "/api/v1/sessions": {
+      "get": {
+        "summary": "Listar conversas",
+        "responses": {
+          "200": {
+            "description": "Conversas recentes"
+          }
+        }
+      }
+    },
+    "/api/v1/session/{id}": {
+      "get": {
+        "summary": "Obter conversa",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversa"
+          }
+        }
+      }
+    },
+    "/api/v1/chat": {
+      "post": {
+        "summary": "Enviar mensagem ao agente",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "message"
+                ],
+                "properties": {
+                  "message": {
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resposta, atividade e eventual aprovação pendente"
+          }
+        }
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "summary": "Ler preferências",
+        "responses": {
+          "200": {
+            "description": "Preferências"
+          }
+        }
+      },
+      "post": {
+        "summary": "Atualizar preferências permitidas",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preferências salvas"
+          }
+        }
+      }
+    },
+    "/api/v1/mode": {
+      "post": {
+        "summary": "Alterar modo do agente",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mode"
+                ],
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "normal",
+                      "ask",
+                      "plan",
+                      "auto",
+                      "custom"
+                    ]
+                  },
+                  "custom_plan": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Modo atualizado"
+          }
+        }
+      }
+    },
+    "/api/v1/plan/new": {
+      "post": {
+        "summary": "Criar novo plano",
+        "responses": {
+          "200": {
+            "description": "Plano iniciado"
+          }
+        }
+      }
+    },
+    "/api/v1/plan/approve": {
+      "post": {
+        "summary": "Aprovar plano",
+        "responses": {
+          "200": {
+            "description": "Execução iniciada"
+          }
+        }
+      }
+    },
+    "/api/v1/command/approve": {
+      "post": {
+        "summary": "Aprovar comando pendente",
+        "responses": {
+          "200": {
+            "description": "Comando executado"
+          }
+        }
+      }
+    },
+    "/api/v1/command/reject": {
+      "post": {
+        "summary": "Recusar comando pendente",
+        "responses": {
+          "200": {
+            "description": "Comando recusado"
+          }
+        }
+      }
+    },
+    "/api/v1/terminal": {
+      "post": {
+        "summary": "Executar comando local sujeito às regras de aprovação",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "command"
+                ],
+                "properties": {
+                  "command": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saída ou pedido de aprovação"
+          }
+        }
+      }
+    },
+    "/api/v1/ssh/connect": {
+      "post": {
+        "summary": "Configurar e testar perfil SSH por chave",
+        "responses": {
+          "200": {
+            "description": "Conexão testada"
+          }
+        }
+      }
+    },
+    "/api/v1/ssh/disconnect": {
+      "post": {
+        "summary": "Desativar perfil SSH",
+        "responses": {
+          "200": {
+            "description": "SSH desativado"
+          }
+        }
+      }
+    },
+    "/api/v1/ssh/run": {
+      "post": {
+        "summary": "Executar comando remoto sujeito às regras de aprovação",
+        "responses": {
+          "200": {
+            "description": "Saída remota ou pedido de aprovação"
+          }
+        }
+      }
+    },
+    "/api/v1/connectors": {
+      "get": {
+        "summary": "Listar conectores configurados",
+        "responses": {
+          "200": {
+            "description": "Conectores disponíveis"
+          }
+        }
+      }
+    },
+    "/api/v1/skills": {
+      "get": {
+        "summary": "Listar habilidades instaladas",
+        "responses": {
+          "200": {
+            "description": "Habilidades"
+          }
+        }
+      }
+    },
+    "/api/v1/plugins": {
+      "get": {
+        "summary": "Listar plugins baixados",
+        "responses": {
+          "200": {
+            "description": "Plugins; código baixado não é executado automaticamente"
+          }
+        }
+      }
+    },
+    "/api/v1/plugins/download": {
+      "post": {
+        "summary": "Baixar ZIP do GitHub sem executar código",
+        "responses": {
+          "200": {
+            "description": "Plugin baixado e desativado"
+          }
+        }
+      }
+    },
+    "/api/v1/plugins/toggle": {
+      "post": {
+        "summary": "Marcar plugin como ativo/inativo; não executa código",
+        "responses": {
+          "200": {
+            "description": "Estado atualizado"
+          }
+        }
+      }
+    },
+    "/api/v1/version": {
+      "get": {
+        "summary": "Versão do Hub e da API",
+        "responses": {
+          "200": {
+            "description": "Versões"
+          }
+        }
+      }
+    }
+  }
+}
